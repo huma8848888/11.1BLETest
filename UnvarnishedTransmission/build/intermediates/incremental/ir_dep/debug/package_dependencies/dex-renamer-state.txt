@@ -1,0 +1,4 @@
+#Thu Nov 01 11:28:06 CST 2018
+base.0=G\:\\AS_TEST\\11.1BLETest\\UnvarnishedTransmission\\build\\intermediates\\transforms\\dexMerger\\debug\\10
+path.0=classes.dex
+renamed.0=classes.dex
