@@ -269,18 +269,17 @@ public class UnvarnishedTransmissionActivity extends Activity {
         mtbAutoTx = (ToggleButton) findViewById(R.id.tbAutoTx);
         mtbAutoTx.setOnCheckedChangeListener(new OnCheckedChangeListener() {
         	@Override  
-            public void onCheckedChanged(CompoundButton buttonView,  
-                    boolean isChecked) {  
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 // TODO Auto-generated method stub  
         		// judge the check status
                 if (isChecked) {  
                 	// judge the tx interval is null
-                	if(medtTxInterval.getText().toString() == null || medtTxInterval.getText().toString().length() == 0) {
-                		if(D) Log.e(TAG, "the tx interval shoud not be empty");
-                		Toast.makeText(UnvarnishedTransmissionActivity.this, "the tx interval shoud not be empty!", Toast.LENGTH_SHORT).show();
-                		mtbAutoTx.setChecked(false);
-                		return;
-                	}
+//                	if(medtTxInterval.getText().toString() == null || medtTxInterval.getText().toString().length() == 0) {
+//                		if(D) Log.e(TAG, "the tx interval shoud not be empty");
+//                		Toast.makeText(UnvarnishedTransmissionActivity.this, "the tx interval shoud not be empty!", Toast.LENGTH_SHORT).show();
+//                		mtbAutoTx.setChecked(false);
+//                		return;
+//                	}
                 	// judge the Tx interval value
                 	mTxInterval = Integer.parseInt(medtTxInterval.getText().toString().replace(" ", ""));
                 	
@@ -655,15 +654,15 @@ public class UnvarnishedTransmissionActivity extends Activity {
 	// send data to the remote device and update ui
 	public void SendMessageToRemote(String data) {
 		byte[] sendData;
-		if(0 == medtTxString.length()) {
-			if(D) Log.w(TAG, "the tx string is empty!");
-			// send the msg to update the ui
-			Message message = new Message();
-			message.what = MSG_SEND_MESSAGE_ERROR_UI_UPDATE;
-			message.arg1 = 0;
-			handler.sendMessage(message);
-			return;
-		}
+//		if(0 == medtTxString.length()) {
+//			if(D) Log.w(TAG, "the tx string is empty!");
+//			// send the msg to update the ui
+//			Message message = new Message();
+//			message.what = MSG_SEND_MESSAGE_ERROR_UI_UPDATE;
+//			message.arg1 = 0;
+//			handler.sendMessage(message);
+//			return;
+//		}
 
 		// judge the type of edit Tx String buffer, and change to byte[]
 		if(false) {//Ascii
@@ -1112,20 +1111,91 @@ public class UnvarnishedTransmissionActivity extends Activity {
     };
     
     // Auto Tx Thread
+	//在此处使用自动发送开关来进行采集
     public class ThreadAutoTx extends Thread {
     	public void run() {
     		if(D) Log.i(TAG, "auto tx thread is run");
     		while(isAutoTx) {
     			// send message to remote
-				SendMessageToRemote();
-				
+				SendMessageToRemote("AA");//发送AA
+				while(!hexReceived.equals("55") ){//等待55
+					try {
+						if(D) Log.i(TAG, "auto run waiting 55");
+						Thread.sleep(1);
+					}catch (InterruptedException e){
+						e.printStackTrace();
+					}
+				}
+
+				SendMessageToRemote("53");
     			try {
-    				Thread.sleep(mTxInterval);
+					if(D) Log.i(TAG, "after send 53 wait a moment");
+					Thread.sleep(mTxInterval);
     			} catch (InterruptedException e) {
     				// TODO Auto-generated catch block
     				e.printStackTrace();
     			}
-    		}
+
+				SendMessageToRemote("01");//发送01
+				try {
+					if(D) Log.i(TAG, "after send 01 wait a moment");
+					Thread.sleep(mTxInterval);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+				SendMessageToRemote("00");//发送00
+				try {
+					if(D) Log.i(TAG, "after send first 00 wait a moment");
+					Thread.sleep(mTxInterval);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+				SendMessageToRemote("00");//发送00
+				try {
+					if(D) Log.i(TAG, "after send second 00 wait a moment");
+					Thread.sleep(mTxInterval);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+				SendMessageToRemote("41");//发送41
+				if(D) Log.i(TAG, "send 41");
+
+
+				while(!hexReceived.equals("AD")){//等待AD到来
+					try {
+						if (D) Log.d(TAG,"waiting for AD");
+						Thread.sleep(1);
+					}catch (InterruptedException e){
+						e.printStackTrace();
+					}
+				}
+
+				SendMessageToRemote("52");//发送52
+				try {
+					if(D) Log.i(TAG, "after send  52 wait a moment");
+					Thread.sleep(mTxInterval);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+				while (isAutoTx){
+					SendMessageToRemote("99");//发送99
+					try {
+						if(D) Log.i(TAG, "after send 99 wait a moment");
+						Thread.sleep(mTxInterval);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			}
     		if(D) Log.i(TAG, "auto tx thread is stop");
     	}
     }
