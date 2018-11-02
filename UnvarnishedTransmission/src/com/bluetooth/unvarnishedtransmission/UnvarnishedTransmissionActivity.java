@@ -865,15 +865,31 @@ public class UnvarnishedTransmissionActivity extends Activity {
     	}
     };
 
-    public static String hexReceived = null;
-    
-    // data receive
+    public volatile String hexReceived = null;
+
+	public static float getFloat(byte[] a) {
+		// 4 bytes
+		byte[] byteValToConvert = new byte[4];
+		for (int i = 0 ; i < 4 ; i++ ){
+			byteValToConvert[i]  = a[i + 5];
+		}
+
+		int accum = 0;
+		for ( int shiftBy = 0; shiftBy < 4; shiftBy++ ) {
+			accum |= (byteValToConvert[shiftBy] & 0xff) << shiftBy * 8;
+		}
+		return Float.intBitsToFloat(accum);
+	}
+
+	// data receive
     public void onDataReceive(byte[] data) {
     	if(true == isRxOn) {
 
     		hexReceived = StringByteTrans.byte2HexStr(data);
 	    	if(D) Log.d(TAG, "receive data is: " + hexReceived);
-
+	    	if (data.length > 2){
+	    		Log.d(TAG,"float value is :"+getFloat(data));
+			}
 	    	mRxCounter = mRxCounter + data.length;
 	    	// Store the receive data, store with ASCII, should store in a StringBuilder first, 
 	    	// because the receive speed will be very fast, near 10ms a packet
@@ -1118,9 +1134,10 @@ public class UnvarnishedTransmissionActivity extends Activity {
     		while(isAutoTx) {
     			// send message to remote
 				SendMessageToRemote("AA");//发送AA
-				while(!hexReceived.equals("55") ){//等待55
+
+				while(hexReceived == "55"){//等待55,这里为什么不是在不相等的时候等待？好奇怪
 					try {
-						if(D) Log.i(TAG, "auto run waiting 55");
+						if(D) Log.i(TAG, "auto run waiting 55" + " hexReceived is " + hexReceived);
 						Thread.sleep(1);
 					}catch (InterruptedException e){
 						e.printStackTrace();
@@ -1136,40 +1153,40 @@ public class UnvarnishedTransmissionActivity extends Activity {
     				e.printStackTrace();
     			}
 
-				SendMessageToRemote("01");//发送01
+				SendMessageToRemote("41");//发送01Bit3
 				try {
-					if(D) Log.i(TAG, "after send 01 wait a moment");
+					if(D) Log.i(TAG, "after send 41 Bit3 wait a moment");
 					Thread.sleep(mTxInterval);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 
-				SendMessageToRemote("00");//发送00
+				SendMessageToRemote("00");//发送00 Bit2
 				try {
-					if(D) Log.i(TAG, "after send first 00 wait a moment");
+					if(D) Log.i(TAG, "after send Bit2 00 wait a moment");
 					Thread.sleep(mTxInterval);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 
-				SendMessageToRemote("00");//发送00
+				SendMessageToRemote("00");//发送00 Bit1
 				try {
-					if(D) Log.i(TAG, "after send second 00 wait a moment");
+					if(D) Log.i(TAG, "after send Bit1 00 wait a moment");
 					Thread.sleep(mTxInterval);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 
-				SendMessageToRemote("41");//发送41
-				if(D) Log.i(TAG, "send 41");
+				SendMessageToRemote("01");//发送01 Bit0
+				if(D) Log.i(TAG, "send 01");
 
 
-				while(!hexReceived.equals("AD")){//等待AD到来
+				while(hexReceived =="AD"){//等待AD到来
 					try {
-						if (D) Log.d(TAG,"waiting for AD");
+						if (D) Log.d(TAG,"waiting for AD" + "hexReceived is " + hexReceived);
 						Thread.sleep(1);
 					}catch (InterruptedException e){
 						e.printStackTrace();
