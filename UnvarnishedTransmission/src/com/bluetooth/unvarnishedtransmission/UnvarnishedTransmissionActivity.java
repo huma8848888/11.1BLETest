@@ -870,8 +870,10 @@ public class UnvarnishedTransmissionActivity extends Activity {
 	public static float getFloat(byte[] a) {
 		// 4 bytes
 		byte[] byteValToConvert = new byte[4];
+		byte temp;
 		for (int i = 0 ; i < 4 ; i++ ){
-			byteValToConvert[i]  = a[i + 5];
+			temp = a[i + 5];
+			byteValToConvert[i]  = temp;
 		}
 
 		int accum = 0;
@@ -888,7 +890,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
     		hexReceived = StringByteTrans.byte2HexStr(data);
 	    	if(D) Log.d(TAG, "receive data is: " + hexReceived);
 	    	if (data.length > 2){
-	    		Log.d(TAG,"float value is :"+getFloat(data));
+	    		Log.d("floatVal","float value is :"+getFloat(data));
 			}
 	    	mRxCounter = mRxCounter + data.length;
 	    	// Store the receive data, store with ASCII, should store in a StringBuilder first, 
@@ -1193,24 +1195,33 @@ public class UnvarnishedTransmissionActivity extends Activity {
 					}
 				}
 
-				SendMessageToRemote("52");//发送52
-				try {
-					if(D) Log.i(TAG, "after send  52 wait a moment");
-					Thread.sleep(mTxInterval);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+//				SendMessageToRemote("52");//发送52
+//				try {
+//					if(D) Log.i(TAG, "after send  52 wait a moment");
+//					Thread.sleep(mTxInterval);
+//				} catch (InterruptedException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
 
 				while (isAutoTx){
-					SendMessageToRemote("99");//发送99
+					SendMessageToRemote("52");//发送52
+					while(hexReceived =="AD"){//等待AD到来
+						try {
+							if (D) Log.d(TAG,"waiting for AD" + "hexReceived is " + hexReceived);
+							Thread.sleep(1);
+						}catch (InterruptedException e){
+							e.printStackTrace();
+						}
+					}
 					try {
-						if(D) Log.i(TAG, "after send 99 wait a moment");
+						if(D) Log.i(TAG, "after send  52 wait a moment");
 						Thread.sleep(mTxInterval);
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
+
 				}
 			}
     		if(D) Log.i(TAG, "auto tx thread is stop");
