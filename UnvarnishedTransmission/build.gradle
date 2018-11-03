@@ -1,16 +1,22 @@
 buildscript {
     repositories {
 
-        mavenCentral()
+        google()
+        jcenter()
+
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:0.5+'
+        classpath 'com.android.tools.build:gradle:3.2.0'
     }
 }
 apply plugin: 'android'
 
 dependencies {
+    implementation 'com.android.support:appcompat-v7:21.0.3'
+    implementation 'com.android.support.constraint:constraint-layout:1.1.3'
     compile fileTree(dir: 'libs', include: '*.jar')
+    implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0-alpha'
+
 }
 
 android {
@@ -41,6 +47,6 @@ android {
         release.setRoot('build-types/release')
     }
     defaultConfig {
-        minSdkVersion  19
+        minSdkVersion 19
     }
 }

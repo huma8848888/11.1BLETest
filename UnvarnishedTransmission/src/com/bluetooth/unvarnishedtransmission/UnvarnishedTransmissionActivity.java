@@ -144,7 +144,8 @@ public class UnvarnishedTransmissionActivity extends Activity {
     // Button
     private Button mbtnTx;
     private Button mbtnClear;
-        
+    private Button mbtnChart;
+
     // EditText
     private EditText medtRxString;
     private EditText medtTxString;
@@ -223,11 +224,13 @@ public class UnvarnishedTransmissionActivity extends Activity {
         // Button
         mbtnTx = (Button) findViewById(R.id.btnTx);
         mbtnClear = (Button) findViewById(R.id.btnClear);
+        mbtnChart = (Button) findViewById(R.id.btnChart);
      
         // Button listener 
         mbtnTx.setOnClickListener(new ButtonClick());
         mbtnClear.setOnClickListener(new ButtonClick());
-     	
+		mbtnChart.setOnClickListener(new ButtonClick());
+
         // EditText initial
         medtRxString = (EditText) findViewById(R.id.edtRxString);
         medtTxString = (EditText) findViewById(R.id.edtTxString);
@@ -585,6 +588,11 @@ public class UnvarnishedTransmissionActivity extends Activity {
 				
 				lastSpeedUpdateTime = 0;
 				break;
+
+			case R.id.btnChart:
+				Intent startChartActivity = new Intent(UnvarnishedTransmissionActivity.this,chartTestActivity.class);
+				startActivity(startChartActivity);
+				break;
 			}
 		}
 	}
@@ -867,12 +875,44 @@ public class UnvarnishedTransmissionActivity extends Activity {
 
     public volatile String hexReceived = null;
 
-	public static float getFloat(byte[] a) {
+	public static float getTransFloat(byte[] a) {//获取位移的值
 		// 4 bytes
 		byte[] byteValToConvert = new byte[4];
 		byte temp;
 		for (int i = 0 ; i < 4 ; i++ ){
-			temp = a[i + 5];
+			temp = a[i + 17];
+			byteValToConvert[i]  = temp;
+		}
+
+		int accum = 0;
+		for ( int shiftBy = 0; shiftBy < 4; shiftBy++ ) {
+			accum |= (byteValToConvert[shiftBy] & 0xff) << shiftBy * 8;
+		}
+		return Float.intBitsToFloat(accum);
+	}
+
+	public static float getVerlocityFloat(byte[] a) {//获取速度值
+		// 4 bytes
+		byte[] byteValToConvert = new byte[4];
+		byte temp;
+		for (int i = 0 ; i < 4 ; i++ ){
+			temp = a[i + 13];
+			byteValToConvert[i]  = temp;
+		}
+
+		int accum = 0;
+		for ( int shiftBy = 0; shiftBy < 4; shiftBy++ ) {
+			accum |= (byteValToConvert[shiftBy] & 0xff) << shiftBy * 8;
+		}
+		return Float.intBitsToFloat(accum);
+	}
+
+	public static float getAccelerationFloat(byte[] a) {//获取加速度值
+		// 4 bytes
+		byte[] byteValToConvert = new byte[4];
+		byte temp;
+		for (int i = 0 ; i < 4 ; i++ ){
+			temp = a[i + 9];
 			byteValToConvert[i]  = temp;
 		}
 
@@ -890,7 +930,9 @@ public class UnvarnishedTransmissionActivity extends Activity {
     		hexReceived = StringByteTrans.byte2HexStr(data);
 	    	if(D) Log.d(TAG, "receive data is: " + hexReceived);
 	    	if (data.length > 2){
-	    		Log.d("floatVal","float value is :"+getFloat(data));
+	    		Log.d("floatVal","float trans value is :"+ getTransFloat(data) + "mm");
+				Log.d("floatVal","float verlocity value is :"+ getVerlocityFloat(data) + "mm/s");
+				Log.d("floatVal","float acceleration value is :"+ getAccelerationFloat(data) + "m/s^2");
 			}
 	    	mRxCounter = mRxCounter + data.length;
 	    	// Store the receive data, store with ASCII, should store in a StringBuilder first, 
@@ -1155,9 +1197,9 @@ public class UnvarnishedTransmissionActivity extends Activity {
     				e.printStackTrace();
     			}
 
-				SendMessageToRemote("41");//发送01Bit3
+				SendMessageToRemote("40");//发送01Bit3
 				try {
-					if(D) Log.i(TAG, "after send 41 Bit3 wait a moment");
+					if(D) Log.i(TAG, "after send 40 Bit3 wait a moment");
 					Thread.sleep(mTxInterval);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
@@ -1173,9 +1215,9 @@ public class UnvarnishedTransmissionActivity extends Activity {
 					e.printStackTrace();
 				}
 
-				SendMessageToRemote("00");//发送00 Bit1
+				SendMessageToRemote("01");//发送00 Bit1
 				try {
-					if(D) Log.i(TAG, "after send Bit1 00 wait a moment");
+					if(D) Log.i(TAG, "after send Bit1 01 wait a moment");
 					Thread.sleep(mTxInterval);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
@@ -1186,7 +1228,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
 				if(D) Log.i(TAG, "send 01");
 
 
-				while(hexReceived =="AD"){//等待AD到来
+				while(hexReceived =="AD"){//等待AD到来，此时可以发送0x52开始测量
 					try {
 						if (D) Log.d(TAG,"waiting for AD" + "hexReceived is " + hexReceived);
 						Thread.sleep(1);
@@ -1206,7 +1248,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
 
 				while (isAutoTx){
 					SendMessageToRemote("52");//发送52
-					while(hexReceived =="AD"){//等待AD到来
+					while(hexReceived =="AD"){//等待AD到来，证明一次测量已结束
 						try {
 							if (D) Log.d(TAG,"waiting for AD" + "hexReceived is " + hexReceived);
 							Thread.sleep(1);
@@ -1216,7 +1258,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
 					}
 					try {
 						if(D) Log.i(TAG, "after send  52 wait a moment");
-						Thread.sleep(mTxInterval);
+						Thread.sleep(500);
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();

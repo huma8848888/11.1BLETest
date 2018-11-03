@@ -5,7 +5,7 @@
     <string name="activity_name">蓝牙双向透传2.0</string>
     <string name="action_connect">选择设备</string>
     <string name="hello_world">Hello world!</string>
-	<string name="string_back">返回</string>
-	<string name="string_refresh">刷新</string>
-	<string name="ble_search_name">Ble Devices</string>
+    <string name="string_back">返回</string>
+    <string name="string_refresh">刷新</string>
+    <string name="ble_search_name">Ble Devices</string>
 </resources>
