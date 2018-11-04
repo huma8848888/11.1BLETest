@@ -17,6 +17,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -39,7 +40,10 @@ import android.widget.TextView.OnEditorActionListener;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import com.github.mikephil.charting.charts.LineChart;
+
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -88,7 +92,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
     private volatile long mTxCounter;
     
     // Tx interval
-    private int mTxInterval;
+//    private int mTxInterval;
     private int MIN_TX_INTERVAL = 20;
     
     // ͬ���ź����������첽������
@@ -141,19 +145,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
     
     // bluetooth Manager
     private BluetoothManager mBluetoothManager;
-    // Button
-    private Button mbtnTx;
-    private Button mbtnClear;
-    private Button mbtnChart;
 
-    // EditText
-    private EditText medtRxString;
-    private EditText medtTxString;
-    private EditText medtTxInterval;
-    
-    // Switch
-    private Switch mswTxAsciiHex;
-    
     // TextView 
     private TextView mtvRxCount;
     private TextView mtvRxSpeed;
@@ -186,6 +178,14 @@ public class UnvarnishedTransmissionActivity extends Activity {
     
     // InputMethodManager
     InputMethodManager mInputMethodManager;
+
+    /**************chart变量区************/
+
+	private DynamicLineChartManager dynamicLineChartManager1;
+	private List<Integer> list = new ArrayList<>(); //数据集合
+	private List<String> names = new ArrayList<>(); //折线名字集合
+	private List<Integer> colour = new ArrayList<>();//折线颜色集合
+    /**************chart变量区结束*********************/
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -194,7 +194,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
         // Set Title
         try {
         	// ActionBar initial
-            getActionBar().setTitle("����˫��͸��" + this.getPackageManager().getPackageInfo(this.getPackageName(), 0).versionName);
+            getActionBar().setTitle("蓝牙测震系统" + this.getPackageManager().getPackageInfo(this.getPackageName(), 0).versionName);
             //getActionBar().setDisplayHomeAsUpEnabled(true);
 		} catch (NameNotFoundException e) {
 			// TODO Auto-generated catch block
@@ -220,53 +220,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
         	finish();
         }
         
-        
-        // Button
-        mbtnTx = (Button) findViewById(R.id.btnTx);
-        mbtnClear = (Button) findViewById(R.id.btnClear);
-        mbtnChart = (Button) findViewById(R.id.btnChart);
-     
-        // Button listener 
-        mbtnTx.setOnClickListener(new ButtonClick());
-        mbtnClear.setOnClickListener(new ButtonClick());
-		mbtnChart.setOnClickListener(new ButtonClick());
 
-        // EditText initial
-        medtRxString = (EditText) findViewById(R.id.edtRxString);
-        medtTxString = (EditText) findViewById(R.id.edtTxString);
-        medtTxInterval = (EditText) findViewById(R.id.edtTxInterval);
-                
-        // edit text watcher
-        medtTxInterval.setOnEditorActionListener(new OnEditorActionListener() {
-			@Override
-			public boolean onEditorAction(TextView arg0, int arg1, KeyEvent arg2) {
-				if (arg1 == EditorInfo.IME_ACTION_DONE) {
-					// judge the tx interval
-					TxIntervalJudge();
-				}
-				return false;
-			}
-        });
-        
-        // Switch initial
-        mswTxAsciiHex = (Switch)findViewById(R.id.swTxAsciiHex);
-        mswTxAsciiHex.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-        	@Override  
-            public void onCheckedChanged(CompoundButton buttonView,  
-                    boolean isChecked) {  
-                // TODO Auto-generated method stub  
-                if (isChecked) {  
-                    isTxAsciiHex = false;
-                } else {  
-                	isTxAsciiHex = true;
-                }
-                // send the msg
-		    	Message message = new Message();
-		        message.what = MSG_EDIT_TX_STRING_ASCII_OR_HEX;
-		        handler.sendMessage(message);
-            }  
-        });
-        
         
         // EditText initial
         mtbAutoTx = (ToggleButton) findViewById(R.id.tbAutoTx);
@@ -275,40 +229,19 @@ public class UnvarnishedTransmissionActivity extends Activity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 // TODO Auto-generated method stub  
         		// judge the check status
-                if (isChecked) {  
-                	// judge the tx interval is null
-//                	if(medtTxInterval.getText().toString() == null || medtTxInterval.getText().toString().length() == 0) {
-//                		if(D) Log.e(TAG, "the tx interval shoud not be empty");
-//                		Toast.makeText(UnvarnishedTransmissionActivity.this, "the tx interval shoud not be empty!", Toast.LENGTH_SHORT).show();
-//                		mtbAutoTx.setChecked(false);
-//                		return;
-//                	}
-                	// judge the Tx interval value
-                	mTxInterval = Integer.parseInt(medtTxInterval.getText().toString().replace(" ", ""));
-                	
-                	// limit the tx interval, here can do more thing, now we just consider the ble interval
-                	if(mTxInterval < MIN_TX_INTERVAL) {
-                		if(D) Log.e(TAG, "the tx interval is less than the limit ble interval");
-                		Toast.makeText(UnvarnishedTransmissionActivity.this, "the tx interval is too small! the limit time is: " 
-                						+ String.valueOf(MIN_TX_INTERVAL) + "ms", Toast.LENGTH_SHORT).show();
-                		medtTxInterval.setText(String.valueOf(MIN_TX_INTERVAL));
-                		mtbAutoTx.setChecked(false);
-                		return;
-                	}
-                    isAutoTx = true;
-                    mbtnTx.setEnabled(false);
-                    medtTxString.setEnabled(false);
-                    medtTxInterval.setEnabled(false);
-                    
+                if (isChecked) {
+                      isAutoTx = true;
+
                     // run the auto tx thread
                     mThreadAutoTx = new ThreadAutoTx();
                     mThreadAutoTx.start();
                     
                 } else {  
                 	isAutoTx = false;
-                	mbtnTx.setEnabled(true);
-                	medtTxString.setEnabled(true);
-                	medtTxInterval.setEnabled(true);
+
+                	if (!mThreadAutoTx.isInterrupted()){
+						mThreadAutoTx.interrupt();
+					}
                 }
             }  
         });
@@ -338,10 +271,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
         
         
         // TextView initial 
-        mtvRxCount = (TextView)findViewById(R.id.tvRxCount);
-        mtvRxSpeed = (TextView)findViewById(R.id.tvRxSpeed);
-        mtvTxCount = (TextView)findViewById(R.id.tvTxCount);
-        mtvTxSpeed = (TextView)findViewById(R.id.tvTxSpeed);
+
         mtvGattStatus = (TextView)findViewById(R.id.tvGattStatus);
                 
         // RX string builder initial capacity with MAX_RX_BUFFER
@@ -355,7 +285,22 @@ public class UnvarnishedTransmissionActivity extends Activity {
     	
     	//InputMethodManager
     	mInputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-    }
+
+
+    	/*******chart方法区********************/
+		LineChart mChart1 = (LineChart) findViewById(R.id.chart);
+		//折线名字
+		names.add("震动位移:mm");
+
+		//折线颜色
+//		colour.add(Color.CYAN);
+//		colour.add(Color.GREEN);
+		colour.add(Color.BLUE);
+		dynamicLineChartManager1 = new DynamicLineChartManager(mChart1, names.get(0), colour.get(0));
+		dynamicLineChartManager1.setYAxis(100, 0, 10);
+		/*******chart方法区结束********************/
+
+	}
     
     @Override
     protected void onResume() {
@@ -431,7 +376,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
     }
     
     @Override
-    public void onStop( ) {
+    public void onStop() {
     	if(D) Log.d(TAG, "-------onStop-------");
     	// Do something when activity on stop
     	// kill the auto unpack thread
@@ -520,33 +465,6 @@ public class UnvarnishedTransmissionActivity extends Activity {
         return true;
     }	
     
-    // judge tx interval
-    private void TxIntervalJudge() {
-    	//if (key == EditorInfo.IME_ACTION_DONE || keyevent.getAction() == KeyEvent.KEYCODE_BACK) {
-			// judge the tx interval is null
-        	if(medtTxInterval.getText().toString() == null || medtTxInterval.getText().toString().length() == 0) {
-        		if(D) Log.e(TAG, "the tx interval shoud not be empty");
-        		Toast.makeText(UnvarnishedTransmissionActivity.this, "the tx interval shoud not be empty!", Toast.LENGTH_SHORT).show();
-        		// update the value
-        		medtTxInterval.setText(String.valueOf(MIN_TX_INTERVAL));
-        	}
-        	// judge the Tx interval value
-        	int txInterval = Integer.parseInt(medtTxInterval.getText().toString().replace(" ", ""));
-        	
-        	// limit the tx interval, here can do more thing, now we just consider the ble interval
-        	if(txInterval < MIN_TX_INTERVAL) {
-        		if(D) Log.e(TAG, "the tx interval is less than the limit ble interval");
-        		Toast.makeText(UnvarnishedTransmissionActivity.this, "the tx interval is too small! the limit time is: " 
-        						+ String.valueOf(MIN_TX_INTERVAL) + "ms", Toast.LENGTH_SHORT).show();
-        		// update the value
-        		medtTxInterval.setText(String.valueOf(MIN_TX_INTERVAL));
-        		
-        	}
-        	// remove the focus
-        	medtTxInterval.clearFocus();
-        	closeInputMethod();
-		//}
-    }
     // cloae the input method
     private void closeInputMethod() {
         boolean isOpen = mInputMethodManager.isActive();
@@ -556,145 +474,15 @@ public class UnvarnishedTransmissionActivity extends Activity {
             		InputMethodManager.HIDE_NOT_ALWAYS);
         }
     }
-    class ButtonClick implements OnClickListener
-	{
-		@Override
-		public void onClick(View v) {
-			// TODO Auto-generated method stub
-			switch(v.getId()) {
-			//If the Tx button click
-			case R.id.btnTx:
-				// send message to remote
-				SendMessageToRemote();
-
-				break;
-			//If the Tx button click
-			case R.id.btnClear:
-				//Clear the rx buffer
-				medtRxString.setText("");
-				//Clear the rx counter
-				mRxCounter = 0;
-				lastRxCounter = 0;
-				mtvRxCount.setText("Rx Count: 0");
-				mtvRxSpeed.setText("Rx Speed: 0 Byte/s");
-				
-				//Clear the tx buffer
-				//medtTxString.setText("");
-				//Clear the tx counter
-				mTxCounter = 0;
-				lastTxCounter = 0;
-				mtvTxCount.setText("Tx Count: 0");
-				mtvTxSpeed.setText("Tx Speed: 0 Byte/s");
-				
-				lastSpeedUpdateTime = 0;
-				break;
-
-			case R.id.btnChart:
-				Intent startChartActivity = new Intent(UnvarnishedTransmissionActivity.this,chartTestActivity.class);
-				startActivity(startChartActivity);
-				break;
-			}
-		}
-	}
-    
-    // send data to the remote device and update ui
-	public void SendMessageToRemote( ) {
-		byte[] sendData;
-		if(0 == medtTxString.length()) {
-			if(D) Log.w(TAG, "the tx string is empty!");
-			// send the msg to update the ui
-			Message message = new Message();
-			message.what = MSG_SEND_MESSAGE_ERROR_UI_UPDATE;
-			message.arg1 = 0;
-			handler.sendMessage(message);
-			return;
-		}
-
-		// judge the type of edit Tx String buffer, and change to byte[]
-		if(false) {//Ascii
-			sendData = StringByteTrans.Str2Bytes(medtTxString.getText().toString());
-			//sendData = DigitalTrans.AsciiString2Byte(medtTxString.getText().toString());
-		} else {//hex
-			// remove the space and the "0x", and change to byte[]
-			sendData = StringByteTrans.hexStr2Bytes(medtTxString.getText().toString().replace(" ", "").replace("0x", ""));
-			//sendData = DigitalTrans.hexStringToByte(medtTxString.getText().toString().replace(" ", "").replace("0x", ""));
-		}
-		if(sendData == null) {
-			if(D) Log.e(TAG, "the tx string have some error!");
-
-			// stop the auto tx
-			isAutoTx = false;
-
-			// send the msg to update the ui
-			Message message = new Message();
-			message.what = MSG_SEND_MESSAGE_ERROR_UI_UPDATE;
-			message.arg1 = 1;
-			handler.sendMessage(message);
-			return;
-		}
-
-
-		// ensure last unpack tx is OK
-		if(true == isUnpackSending) {
-			if(D) Log.e(TAG, "the last tx string didn't all send!");
-
-			// stop the auto tx
-			isAutoTx = false;
-
-			// send the msg to update the ui
-			Message message = new Message();
-			message.what = MSG_SEND_MESSAGE_ERROR_UI_UPDATE;
-			message.arg1 = 2;
-			handler.sendMessage(message);
-			return;
-		}
-
-		// send data to the remote device
-		mUnpackThread = new ThreadUnpackSend(sendData);
-		mUnpackThread.start();
-
-		if(D) Log.d(TAG, "send data is: " + Arrays.toString(sendData));
-
-
-	}
-
 
 	// send data to the remote device and update ui
 	public void SendMessageToRemote(String data) {
 		byte[] sendData;
-//		if(0 == medtTxString.length()) {
-//			if(D) Log.w(TAG, "the tx string is empty!");
-//			// send the msg to update the ui
-//			Message message = new Message();
-//			message.what = MSG_SEND_MESSAGE_ERROR_UI_UPDATE;
-//			message.arg1 = 0;
-//			handler.sendMessage(message);
-//			return;
-//		}
 
 		// judge the type of edit Tx String buffer, and change to byte[]
-		if(false) {//Ascii
-			sendData = StringByteTrans.Str2Bytes(medtTxString.getText().toString());
-			//sendData = DigitalTrans.AsciiString2Byte(medtTxString.getText().toString());
-		} else {//hex
-			// remove the space and the "0x", and change to byte[]
-			sendData = StringByteTrans.hexStr2Bytes(data.replace(" ", "").replace("0x", ""));
-			//sendData = DigitalTrans.hexStringToByte(medtTxString.getText().toString().replace(" ", "").replace("0x", ""));
-		}
-		if(sendData == null) {
-			if(D) Log.e(TAG, "the tx string have some error!");
 
-			// stop the auto tx
-			isAutoTx = false;
-
-			// send the msg to update the ui
-			Message message = new Message();
-			message.what = MSG_SEND_MESSAGE_ERROR_UI_UPDATE;
-			message.arg1 = 1;
-			handler.sendMessage(message);
-			return;
-		}
-
+		// remove the space and the "0x", and change to byte[]
+		sendData = StringByteTrans.hexStr2Bytes(data.replace(" ", "").replace("0x", ""));
 
 		// ensure last unpack tx is OK
 		if(true == isUnpackSending) {
@@ -722,8 +510,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
     
     /**
      * Connects to the GATT server hosted on the Bluetooth LE device.
-     *
-     * @param The destination device.
+     * @param For destination device
      *
      * @return Return true if the connection is initiated successfully. The connection result
      *         is reported asynchronously through the
@@ -875,53 +662,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
 
     public volatile String hexReceived = null;
 
-	public static float getTransFloat(byte[] a) {//获取位移的值
-		// 4 bytes
-		byte[] byteValToConvert = new byte[4];
-		byte temp;
-		for (int i = 0 ; i < 4 ; i++ ){
-			temp = a[i + 17];
-			byteValToConvert[i]  = temp;
-		}
 
-		int accum = 0;
-		for ( int shiftBy = 0; shiftBy < 4; shiftBy++ ) {
-			accum |= (byteValToConvert[shiftBy] & 0xff) << shiftBy * 8;
-		}
-		return Float.intBitsToFloat(accum);
-	}
-
-	public static float getVerlocityFloat(byte[] a) {//获取速度值
-		// 4 bytes
-		byte[] byteValToConvert = new byte[4];
-		byte temp;
-		for (int i = 0 ; i < 4 ; i++ ){
-			temp = a[i + 13];
-			byteValToConvert[i]  = temp;
-		}
-
-		int accum = 0;
-		for ( int shiftBy = 0; shiftBy < 4; shiftBy++ ) {
-			accum |= (byteValToConvert[shiftBy] & 0xff) << shiftBy * 8;
-		}
-		return Float.intBitsToFloat(accum);
-	}
-
-	public static float getAccelerationFloat(byte[] a) {//获取加速度值
-		// 4 bytes
-		byte[] byteValToConvert = new byte[4];
-		byte temp;
-		for (int i = 0 ; i < 4 ; i++ ){
-			temp = a[i + 9];
-			byteValToConvert[i]  = temp;
-		}
-
-		int accum = 0;
-		for ( int shiftBy = 0; shiftBy < 4; shiftBy++ ) {
-			accum |= (byteValToConvert[shiftBy] & 0xff) << shiftBy * 8;
-		}
-		return Float.intBitsToFloat(accum);
-	}
 
 	// data receive
     public void onDataReceive(byte[] data) {
@@ -930,21 +671,16 @@ public class UnvarnishedTransmissionActivity extends Activity {
     		hexReceived = StringByteTrans.byte2HexStr(data);
 	    	if(D) Log.d(TAG, "receive data is: " + hexReceived);
 	    	if (data.length > 2){
-	    		Log.d("floatVal","float trans value is :"+ getTransFloat(data) + "mm");
-				Log.d("floatVal","float verlocity value is :"+ getVerlocityFloat(data) + "mm/s");
-				Log.d("floatVal","float acceleration value is :"+ getAccelerationFloat(data) + "m/s^2");
+				dynamicLineChartManager1.addEntry((int) (StringByteTrans.getTransFloat(data)));
+				list.clear();
+	    		Log.d("floatVal","float trans value is :"+ StringByteTrans.getTransFloat(data) + "mm");
+
 			}
 	    	mRxCounter = mRxCounter + data.length;
 	    	// Store the receive data, store with ASCII, should store in a StringBuilder first, 
 	    	// because the receive speed will be very fast, near 10ms a packet
 			mRxStringBuildler.append(StringByteTrans.byte2HexStr(data));
-//	    	mRxStringBuildler.append(StringByteTrans.Byte2String(data));
-	    	//mRxStringBuildler.append(DigitalTrans.bytetoString(data));
-	
-	    	// send the msg, here may send less times MSG, so we use the StringBuildler
-	    	//Message message = new Message();
-	        //message.what = MSG_EDIT_RX_STRING_UPDATE;
-	        //handler.sendMessage(message);
+
     	}
     }
 
@@ -957,7 +693,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
             super.handleMessage(msg);
             if(msg.what == MSG_EDIT_RX_STRING_UPDATE){
             	if(0 == mRxStringBuildler.length()) {
-            		//if(D) Log.w(TAG, "no rx data, don't update");
+            		if(D) Log.w(TAG, "no rx data, don't update");
             		return;
             	}
             	
@@ -967,22 +703,22 @@ public class UnvarnishedTransmissionActivity extends Activity {
             	mRxStringBuildler.delete(0, mRxStringBuildler.length());
             	
             	// update the rx edit text ui
-            	medtRxString.append(s);
+//            	medtRxString.append(s);
             	
             	// if rx edit text is too full
-            	if(MAX_RX_SHOW_BUFFER < medtRxString.length()) {
-            		medtRxString.setText("");
-            	}
+//            	if(MAX_RX_SHOW_BUFFER < medtRxString.length()) {
+//            		medtRxString.setText("");
+//            	}
             	
             	// update the rx counter ui
-            	mtvRxCount.setText("Rx Count: " + String.valueOf(mRxCounter));
+//            	mtvRxCount.setText("Rx Count: " + String.valueOf(mRxCounter));
             	
             	
             } else if(msg.what == MSG_EDIT_TX_STRING_UPDATE) {
             	// do something
             	
             	// update the tx counter ui
-            	mtvTxCount.setText("Tx Count: " + String.valueOf(mTxCounter));
+//            	mtvTxCount.setText("Tx Count: " + String.valueOf(mTxCounter));
             	
             	
             } else if(msg.what == MSG_SPEED_STRING_UPDATE) {
@@ -1003,19 +739,19 @@ public class UnvarnishedTransmissionActivity extends Activity {
                 	//if(D) Log.w(TAG, "rx counter didn't change");
                 } else {
 	                // update the rx speed ui
-	                float rxSpeed = ((float)(mRxCounter - lastRxCounter))/((float)(curTime - lastSpeedUpdateTime))*1000;
-	            	mtvRxSpeed.setText("Rx Speed: " 
-	            				+ speedFormate.format(rxSpeed)
-	            				+ " Byte/s");
+//	                float rxSpeed = ((float)(mRxCounter - lastRxCounter))/((float)(curTime - lastSpeedUpdateTime))*1000;
+//	            	mtvRxSpeed.setText("Rx Speed: "
+//	            				+ speedFormate.format(rxSpeed)
+//	            				+ " Byte/s");
                 }
                 if(mTxCounter < lastTxCounter) {
                 	//if(D) Log.w(TAG, "tx counter didn't change");
                 } else {
 	                // update the tx speed ui
-	            	float txSpeed = ((float)(mTxCounter - lastTxCounter))/((float)(curTime - lastSpeedUpdateTime))*1000;
-	            	mtvTxSpeed.setText("Tx Speed: " 
-	        					+ speedFormate.format(txSpeed)
-	        					+ " Byte/s");
+//	            	float txSpeed = ((float)(mTxCounter - lastTxCounter))/((float)(curTime - lastSpeedUpdateTime))*1000;
+//	            	mtvTxSpeed.setText("Tx Speed: "
+//	        					+ speedFormate.format(txSpeed)
+//	        					+ " Byte/s");
                 }
             	// record the last counter
             	lastTxCounter = mTxCounter;
@@ -1029,41 +765,41 @@ public class UnvarnishedTransmissionActivity extends Activity {
             	String newStr;
             	if(true == isTxAsciiHex) {// hex to ascii
             		// remove the space and the "0x"
-            		oldStr = medtTxString.getText().toString().replace(" ", "").replace("0x", "");// hex string
-            		if(oldStr.equals("")) {
-            			if(D) Log.w(TAG, "change to ASCII failed, the edit text have no string");
-            			return;
-            		}
+//            		oldStr = medtTxString.getText().toString().replace(" ", "").replace("0x", "");// hex string
+//            		if(oldStr.equals("")) {
+//            			if(D) Log.w(TAG, "change to ASCII failed, the edit text have no string");
+//            			return;
+//            		}
             		// Change to ascii str
-            		newStr = StringByteTrans.hexStr2Str(oldStr);
+//            		newStr = StringByteTrans.hexStr2Str(oldStr);
             		//newStr = DigitalTrans.HexString2AsciiString(oldStr);
             	} else {// ascii to hex
-            		oldStr = medtTxString.getText().toString();// ascii string
-            		if(oldStr.equals("")) {
-            			if(D) Log.w(TAG, "change to HEX failed, the edit text have no string");
-            			return;
-            		}
-            		newStr = StringByteTrans.str2HexStr(oldStr);
+//            		oldStr = medtTxString.getText().toString();// ascii string
+//            		if(oldStr.equals("")) {
+//            			if(D) Log.w(TAG, "change to HEX failed, the edit text have no string");
+//            			return;
+//            		}
+//            		newStr = StringByteTrans.str2HexStr(oldStr);
             		//newStr = DigitalTrans.AsciiString2HexString(oldStr);
             	}
-            	if(newStr.equals("")) {
-        			if(D) Log.w(TAG, "change to ASCII/HEX failed, the edit text format is error");
-        			// Clear the edit text
-        			medtTxString.setText("");
-        			return;
-        		}
-            	medtTxString.setText(newStr);
+//            	if(newStr.equals("")) {
+//        			if(D) Log.w(TAG, "change to ASCII/HEX failed, the edit text format is error");
+//        			// Clear the edit text
+//        			medtTxString.setText("");
+//        			return;
+//        		}
+//            	medtTxString.setText(newStr);
             } else if(msg.what == MSG_CONNECTION_STATE_UPDATE) {
             	if(GattConnectState.STATE_INITIAL == mConnectionState) {
             		
             		if(D) Log.i(TAG, "The connection state now is STATE_INITIAL");
             		// Initial state
-            		medtTxInterval.setText("500");// initial tx interval
-            		mswTxAsciiHex.setChecked(false);
+//            		medtTxInterval.setText("500");// initial tx interval
+//            		mswTxAsciiHex.setChecked(false);
             		mtbAutoTx.setChecked(false);
             		
             		mtbAutoTx.setEnabled(false);
-            		mbtnTx.setEnabled(false);
+//            		mbtnTx.setEnabled(false);
             		mtbRxControl.setEnabled(false);
             		
             		// Change the connect state text
@@ -1074,7 +810,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
             		mtbRxControl.setChecked(false);
             		
             		mtbAutoTx.setEnabled(false);
-            		mbtnTx.setEnabled(false);
+//            		mbtnTx.setEnabled(false);
             		mtbRxControl.setEnabled(false);
             		
             		// Change the connect state text
@@ -1090,7 +826,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
             		mtbRxControl.setChecked(false);
             		
             		mtbAutoTx.setEnabled(false);
-            		mbtnTx.setEnabled(false);
+//            		mbtnTx.setEnabled(false);
             		mtbRxControl.setEnabled(false);
             		
             		// change the connect state
@@ -1109,7 +845,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
             		if(D) Log.i(TAG, "The connection state now is STATE_CONNECTED");
             		
             		mtbAutoTx.setEnabled(false);
-            		mbtnTx.setEnabled(false);
+//            		mbtnTx.setEnabled(false);
             		mtbRxControl.setEnabled(false);
             		// Change the connect state text
             		mtvGattStatus.setText("Waiting for find the characteristic");
@@ -1118,7 +854,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
             		if(D) Log.i(TAG, "The connection state now is STATE_CHARACTERISTIC_CONNECTED");
             		
             		mtbAutoTx.setEnabled(true);
-            		mbtnTx.setEnabled(true);
+//            		mbtnTx.setEnabled(true);
             		mtbRxControl.setEnabled(true);
             		
             		// change the connect state
@@ -1143,7 +879,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
             		if(D) Log.i(TAG, "The connection state now is STATE_CHARACTERISTIC_NOT_FOUND");
             		
             		mtbAutoTx.setEnabled(false);
-            		mbtnTx.setEnabled(false);
+//            		mbtnTx.setEnabled(false);
             		mtbRxControl.setEnabled(false);
             		
             		// Change the connect state text
@@ -1191,16 +927,16 @@ public class UnvarnishedTransmissionActivity extends Activity {
 				SendMessageToRemote("53");
     			try {
 					if(D) Log.i(TAG, "after send 53 wait a moment");
-					Thread.sleep(mTxInterval);
+					Thread.sleep(800);
     			} catch (InterruptedException e) {
     				// TODO Auto-generated catch block
     				e.printStackTrace();
     			}
 
-				SendMessageToRemote("40");//发送01Bit3
+				SendMessageToRemote("41");//发送01Bit3
 				try {
 					if(D) Log.i(TAG, "after send 40 Bit3 wait a moment");
-					Thread.sleep(mTxInterval);
+					Thread.sleep(800);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -1209,16 +945,16 @@ public class UnvarnishedTransmissionActivity extends Activity {
 				SendMessageToRemote("00");//发送00 Bit2
 				try {
 					if(D) Log.i(TAG, "after send Bit2 00 wait a moment");
-					Thread.sleep(mTxInterval);
+					Thread.sleep(800);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 
-				SendMessageToRemote("01");//发送00 Bit1
+				SendMessageToRemote("00");//发送00 Bit1
 				try {
 					if(D) Log.i(TAG, "after send Bit1 01 wait a moment");
-					Thread.sleep(mTxInterval);
+					Thread.sleep(800);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -1236,15 +972,6 @@ public class UnvarnishedTransmissionActivity extends Activity {
 						e.printStackTrace();
 					}
 				}
-
-//				SendMessageToRemote("52");//发送52
-//				try {
-//					if(D) Log.i(TAG, "after send  52 wait a moment");
-//					Thread.sleep(mTxInterval);
-//				} catch (InterruptedException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
 
 				while (isAutoTx){
 					SendMessageToRemote("52");//发送52
@@ -1406,7 +1133,6 @@ public class UnvarnishedTransmissionActivity extends Activity {
                             if(D) Log.d(TAG, "close bluetooth");
                             mBluetoothAdapter.disable();
                         }
-                        
                         // close the activity
                         finish();
                 	}

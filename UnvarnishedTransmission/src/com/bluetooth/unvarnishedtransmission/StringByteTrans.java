@@ -205,5 +205,22 @@ public class StringByteTrans {
 	        str.append(new String(chars));    
 	    }    
 	    return str.toString();    
-	}   
+	}
+
+	public static float getTransFloat(byte[] a) {//获取位移的值
+		// 4 bytes
+		byte[] byteValToConvert = new byte[4];
+		byte temp;
+		for (int i = 0 ; i < 4 ; i++ ){
+			temp = a[i + 5];
+			byteValToConvert[i]  = temp;
+		}
+
+		int accum = 0;
+		for ( int shiftBy = 0; shiftBy < 4; shiftBy++ ) {
+			accum |= (byteValToConvert[shiftBy] & 0xff) << shiftBy * 8;
+		}
+		return Float.intBitsToFloat(accum);
+	}
+
 }
