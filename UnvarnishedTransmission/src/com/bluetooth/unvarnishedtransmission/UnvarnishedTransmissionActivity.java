@@ -678,9 +678,9 @@ public class UnvarnishedTransmissionActivity extends Activity {
 
 				Log.d(TAG, "current hexReceived is" + hexReceived);
 
-				while(hexReceived != "55" && isAutoTx == true){//等待55,这里为什么不是在不相等的时候等待？好奇怪
+				while((!"55".equals(hexReceived)) && isAutoTx == true){//等待55,这里为什么不是在不相等的时候等待？好奇怪
 					try {
-						if(D) Log.i(TAG, "auto run waiting 55" + " hexReceived is" + hexReceived + " is equals?" + (hexReceived.equals("55")? true:false));
+						if(D) Log.i(TAG, "auto run waiting 55" + " hexReceived is" + hexReceived + " is equals?" + ("55".equals(hexReceived)? true:false));
 						Thread.sleep(1);
 					}catch (InterruptedException e){
 						e.printStackTrace();
@@ -697,65 +697,65 @@ public class UnvarnishedTransmissionActivity extends Activity {
 					e.printStackTrace();
 				}
 
-//				SendMessageToRemote("41");//发送01Bit3
-//				try {
-//					if(D) Log.i(TAG, "after send 41 Bit3 wait a moment");
-//					Thread.sleep(800);
-//				} catch (InterruptedException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
-//
-//				SendMessageToRemote("00");//发送00 Bit2
-//				try {
-//					if(D) Log.i(TAG, "after send Bit2 00 wait a moment");
-//					Thread.sleep(800);
-//				} catch (InterruptedException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
-//
-//				SendMessageToRemote("00");//发送00 Bit1
-//				try {
-//					if(D) Log.i(TAG, "after send Bit1 01 wait a moment");
-//					Thread.sleep(800);
-//				} catch (InterruptedException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
-//
-//				SendMessageToRemote("01");//发送01 Bit0
-//				if(D) Log.i(TAG, "send 01");
-//
-//
-//				while(hexReceived =="AD"){//等待AD到来，此时可以发送0x52开始测量
-//					try {
-//						if (D) Log.d(TAG,"waiting for AD" + "hexReceived is " + hexReceived);
-//						Thread.sleep(1);
-//					}catch (InterruptedException e){
-//						e.printStackTrace();
-//					}
-//				}
-//
-//				while (isAutoTx){
-//					SendMessageToRemote("52");//发送52
-//					while(hexReceived =="AD"){//等待AD到来，证明一次测量已结束
-//						try {
-//							if (D) Log.d(TAG,"waiting for AD" + "hexReceived is " + hexReceived);
-//							Thread.sleep(1);
-//						}catch (InterruptedException e){
-//							e.printStackTrace();
-//						}
-//					}
-//					try {
-//						if(D) Log.i(TAG, "after send  52 wait a moment");
-//						Thread.sleep(500);
-//					} catch (InterruptedException e) {
-//						// TODO Auto-generated catch block
-//						e.printStackTrace();
-//					}
-//
-//				}
+				SendMessageToRemote("41");//发送01Bit3
+				try {
+					if(D) Log.i(TAG, "after send 41 Bit3 wait a moment");
+					Thread.sleep(800);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+				SendMessageToRemote("00");//发送00 Bit2
+				try {
+					if(D) Log.i(TAG, "after send Bit2 00 wait a moment");
+					Thread.sleep(800);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+				SendMessageToRemote("00");//发送00 Bit1
+				try {
+					if(D) Log.i(TAG, "after send Bit1 01 wait a moment");
+					Thread.sleep(800);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+				SendMessageToRemote("01");//发送01 Bit0
+				if(D) Log.i(TAG, "send 01");
+
+
+				while(!"AD".equals(hexReceived)){//等待AD到来，此时可以发送0x52开始测量
+					try {
+						if (D) Log.d(TAG,"waiting for AD" + "hexReceived is " + hexReceived);
+						Thread.sleep(1);
+					}catch (InterruptedException e){
+						e.printStackTrace();
+					}
+				}
+
+				while (isAutoTx){
+					SendMessageToRemote("52");//发送52
+					while(!"AD".equals(hexReceived)){//等待AD到来，证明一次测量已结束
+						try {
+							if (D) Log.d(TAG,"waiting for AD" + "hexReceived is " + hexReceived);
+							Thread.sleep(1);
+						}catch (InterruptedException e){
+							e.printStackTrace();
+						}
+					}
+					try {
+						if(D) Log.i(TAG, "after send  52 wait a moment");
+						Thread.sleep(500);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+
+				}
 			}
 			if(D) Log.i(TAG, "auto tx thread is stop");
 		}
