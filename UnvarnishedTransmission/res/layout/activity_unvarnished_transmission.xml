@@ -66,9 +66,9 @@
 	        android:background="@drawable/toggle_selector"
         	android:textOff="关闭接收"
         	android:textOn="接收数据中"
-			android:enabled="false"
-        	android:textSize="@dimen/activity_text_size" /> 
 
+        	android:textSize="@dimen/activity_text_size" />
+        <!--android:enabled="false"-->
      </RelativeLayout>
 
 

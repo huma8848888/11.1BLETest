@@ -79,7 +79,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
     private boolean isRxAsciiHex = true;
     
     // flag for rx on/off
-    private boolean isRxOn = false;
+    private boolean isRxOn = true;
     
     // flag for auto tx 
     private boolean isAutoTx = false;
@@ -106,7 +106,6 @@ public class UnvarnishedTransmissionActivity extends Activity {
     private ThreadUnpackSend mUnpackThread;
     
     // Speed UI Update
-    private ThreadSpeed mThreadSpeed;
     private int SPEED_STRING_UPDATE_TIME = 1000;
     private long lastTxCounter = 0;
     private long lastRxCounter = 0;
@@ -201,8 +200,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
 			e.printStackTrace();
 		}
         // get the bluetooth adapter
-        final BluetoothManager bluetoothManager =
-                (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         mBluetoothAdapter = bluetoothManager.getAdapter();
         
         // judge whether android have bluetooth
@@ -221,7 +219,6 @@ public class UnvarnishedTransmissionActivity extends Activity {
         }
         
 
-        
         // EditText initial
         mtbAutoTx = (ToggleButton) findViewById(R.id.tbAutoTx);
         mtbAutoTx.setOnCheckedChangeListener(new OnCheckedChangeListener() {
@@ -231,39 +228,38 @@ public class UnvarnishedTransmissionActivity extends Activity {
         		// judge the check status
                 if (isChecked) {
                       isAutoTx = true;
-
                     // run the auto tx thread
                     mThreadAutoTx = new ThreadAutoTx();
                     mThreadAutoTx.start();
+                    Log.d(TAG, "autoTX thread is on and start running");
                     
                 } else {  
                 	isAutoTx = false;
-
                 	if (!mThreadAutoTx.isInterrupted()){
 						mThreadAutoTx.interrupt();
 					}
-                }
+					Log.d(TAG, "autoTX thread is off and start running");
+				}
             }  
         });
         
         mtbRxControl = (ToggleButton) findViewById(R.id.tbRxControl);
         mtbRxControl.setOnCheckedChangeListener(new OnCheckedChangeListener() {
         	@Override  
-            public void onCheckedChanged(CompoundButton buttonView,  
-                    boolean isChecked) {  
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 // TODO Auto-generated method stub  
         		// judge the check status
+
                 if (isChecked) {  
                 	if(null != mTestCharacter) {
                 		enableNotification(mBluetoothGatt, mTestCharacter);
                 	}
                 	isRxOn = true;
-                	
                 	// Create a thread to receice data and update ui
                 	mThreadRx = new ThreadRx();
                 	mThreadRx.start();
-                    
-                } else {  
+					Log.d(TAG, "autoRX thread is on and start running");
+				} else {
                 	isRxOn = false;
                 }
             }  
@@ -393,11 +389,6 @@ public class UnvarnishedTransmissionActivity extends Activity {
     	if(null != mThreadRx) {
     		mThreadRx.interrupt();
     	}
-    	
-    	// kill the speed ui update thread
-    	if(null != mThreadSpeed) {
-    		mThreadSpeed.interrupt();
-    	}
     	super.onStop();
     }
     
@@ -411,7 +402,6 @@ public class UnvarnishedTransmissionActivity extends Activity {
     	}
     	
     	mTestCharacter = null;
-    	
     	super.onDestroy();
     }
     
@@ -459,7 +449,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
     // judge the support of ble in android  
     private boolean EnsureBleExist() {
         if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-            Toast.makeText(this, "������֧��BLE", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "不支持蓝牙功能", Toast.LENGTH_LONG).show();
             return false;
         }
         return true;
@@ -478,9 +468,6 @@ public class UnvarnishedTransmissionActivity extends Activity {
 	// send data to the remote device and update ui
 	public void SendMessageToRemote(String data) {
 		byte[] sendData;
-
-		// judge the type of edit Tx String buffer, and change to byte[]
-
 		// remove the space and the "0x", and change to byte[]
 		sendData = StringByteTrans.hexStr2Bytes(data.replace(" ", "").replace("0x", ""));
 
@@ -503,7 +490,8 @@ public class UnvarnishedTransmissionActivity extends Activity {
 		mUnpackThread = new ThreadUnpackSend(sendData);
 		mUnpackThread.start();
 
-		if(D) Log.d(TAG, "send data is: " + Arrays.toString(sendData));
+		if(D) Log.d(TAG, "send data is: " + data);
+//		if(D) Log.d(TAG, "send data is: " + Arrays.toString(sendData));
 
 	}
     
@@ -660,30 +648,118 @@ public class UnvarnishedTransmissionActivity extends Activity {
     	}
     };
 
-    public volatile String hexReceived = null;
-
-
+    public static String hexReceived = null;
 
 	// data receive
     public void onDataReceive(byte[] data) {
     	if(true == isRxOn) {
-
     		hexReceived = StringByteTrans.byte2HexStr(data);
 	    	if(D) Log.d(TAG, "receive data is: " + hexReceived);
 	    	if (data.length > 2){
 				dynamicLineChartManager1.addEntry((int) (StringByteTrans.getTransFloat(data)));
 				list.clear();
 	    		Log.d("floatVal","float trans value is :"+ StringByteTrans.getTransFloat(data) + "mm");
-
 			}
-	    	mRxCounter = mRxCounter + data.length;
+//	    	mRxCounter = mRxCounter + data.length;
 	    	// Store the receive data, store with ASCII, should store in a StringBuilder first, 
 	    	// because the receive speed will be very fast, near 10ms a packet
-			mRxStringBuildler.append(StringByteTrans.byte2HexStr(data));
-
+//			mRxStringBuildler.append(StringByteTrans.byte2HexStr(data));
     	}
     }
 
+	// Auto Tx Thread
+	//在此处使用自动发送开关来进行采集
+	public class ThreadAutoTx extends Thread {
+		public void run() {
+			if(D) Log.i(TAG, "auto tx thread is run");
+			if(isAutoTx) {
+				// send message to remote
+				SendMessageToRemote("AA");//发送AA
+
+				Log.d(TAG, "current hexReceived is" + hexReceived);
+
+				while(hexReceived != "55" && isAutoTx == true){//等待55,这里为什么不是在不相等的时候等待？好奇怪
+					try {
+						if(D) Log.i(TAG, "auto run waiting 55" + " hexReceived is" + hexReceived + " is equals?" + (hexReceived.equals("55")? true:false));
+						Thread.sleep(1);
+					}catch (InterruptedException e){
+						e.printStackTrace();
+					}
+				}
+				Log.d(TAG, "current hexReceived2 is" + hexReceived);
+
+				SendMessageToRemote("53");
+				try {
+					if(D) Log.i(TAG, "after send 53 wait a moment");
+					Thread.sleep(800);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+//				SendMessageToRemote("41");//发送01Bit3
+//				try {
+//					if(D) Log.i(TAG, "after send 41 Bit3 wait a moment");
+//					Thread.sleep(800);
+//				} catch (InterruptedException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//
+//				SendMessageToRemote("00");//发送00 Bit2
+//				try {
+//					if(D) Log.i(TAG, "after send Bit2 00 wait a moment");
+//					Thread.sleep(800);
+//				} catch (InterruptedException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//
+//				SendMessageToRemote("00");//发送00 Bit1
+//				try {
+//					if(D) Log.i(TAG, "after send Bit1 01 wait a moment");
+//					Thread.sleep(800);
+//				} catch (InterruptedException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//
+//				SendMessageToRemote("01");//发送01 Bit0
+//				if(D) Log.i(TAG, "send 01");
+//
+//
+//				while(hexReceived =="AD"){//等待AD到来，此时可以发送0x52开始测量
+//					try {
+//						if (D) Log.d(TAG,"waiting for AD" + "hexReceived is " + hexReceived);
+//						Thread.sleep(1);
+//					}catch (InterruptedException e){
+//						e.printStackTrace();
+//					}
+//				}
+//
+//				while (isAutoTx){
+//					SendMessageToRemote("52");//发送52
+//					while(hexReceived =="AD"){//等待AD到来，证明一次测量已结束
+//						try {
+//							if (D) Log.d(TAG,"waiting for AD" + "hexReceived is " + hexReceived);
+//							Thread.sleep(1);
+//						}catch (InterruptedException e){
+//							e.printStackTrace();
+//						}
+//					}
+//					try {
+//						if(D) Log.i(TAG, "after send  52 wait a moment");
+//						Thread.sleep(500);
+//					} catch (InterruptedException e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
+//
+//				}
+			}
+			if(D) Log.i(TAG, "auto tx thread is stop");
+		}
+	}
     
     
     // for ui update
@@ -692,74 +768,28 @@ public class UnvarnishedTransmissionActivity extends Activity {
         public void handleMessage(Message msg){
             super.handleMessage(msg);
             if(msg.what == MSG_EDIT_RX_STRING_UPDATE){
-            	if(0 == mRxStringBuildler.length()) {
-            		if(D) Log.w(TAG, "no rx data, don't update");
-            		return;
-            	}
-            	
-            	// store the buffer
-            	String s = mRxStringBuildler.toString();
-            	// Clear the buffer
-            	mRxStringBuildler.delete(0, mRxStringBuildler.length());
-            	
-            	// update the rx edit text ui
-//            	medtRxString.append(s);
-            	
-            	// if rx edit text is too full
-//            	if(MAX_RX_SHOW_BUFFER < medtRxString.length()) {
-//            		medtRxString.setText("");
+//            	if(0 == mRxStringBuildler.length()) {
+//            		if(D) Log.w(TAG, "no rx data, don't update");
+//            		return;
 //            	}
+//
+//            	// store the buffer
+//            	String s = mRxStringBuildler.toString();
+//            	// Clear the buffer
+//            	mRxStringBuildler.delete(0, mRxStringBuildler.length());
+//
+//            	// update the rx edit text ui
+////            	medtRxString.append(s);
+//
+//            	// if rx edit text is too full
+////            	if(MAX_RX_SHOW_BUFFER < medtRxString.length()) {
+////            		medtRxString.setText("");
+////            	}
+//
+//            	// update the rx counter ui
+////            	mtvRxCount.setText("Rx Count: " + String.valueOf(mRxCounter));
             	
-            	// update the rx counter ui
-//            	mtvRxCount.setText("Rx Count: " + String.valueOf(mRxCounter));
             	
-            	
-            } else if(msg.what == MSG_EDIT_TX_STRING_UPDATE) {
-            	// do something
-            	
-            	// update the tx counter ui
-//            	mtvTxCount.setText("Tx Count: " + String.valueOf(mTxCounter));
-            	
-            	
-            } else if(msg.what == MSG_SPEED_STRING_UPDATE) {
-            	long curTime = System.currentTimeMillis();
-            	
-            	if(0 == lastSpeedUpdateTime) {
-            		if(D) Log.d(TAG, "first time to update speed ui");
-            		lastSpeedUpdateTime = System.currentTimeMillis();
-            		return;
-            	}
-                
-                if(curTime == lastSpeedUpdateTime) {
-                	if(D) Log.w(TAG, "speed calculate with time equal");
-                	return;
-                }
-                
-                if(mRxCounter < lastRxCounter) {
-                	//if(D) Log.w(TAG, "rx counter didn't change");
-                } else {
-	                // update the rx speed ui
-//	                float rxSpeed = ((float)(mRxCounter - lastRxCounter))/((float)(curTime - lastSpeedUpdateTime))*1000;
-//	            	mtvRxSpeed.setText("Rx Speed: "
-//	            				+ speedFormate.format(rxSpeed)
-//	            				+ " Byte/s");
-                }
-                if(mTxCounter < lastTxCounter) {
-                	//if(D) Log.w(TAG, "tx counter didn't change");
-                } else {
-	                // update the tx speed ui
-//	            	float txSpeed = ((float)(mTxCounter - lastTxCounter))/((float)(curTime - lastSpeedUpdateTime))*1000;
-//	            	mtvTxSpeed.setText("Tx Speed: "
-//	        					+ speedFormate.format(txSpeed)
-//	        					+ " Byte/s");
-                }
-            	// record the last counter
-            	lastTxCounter = mTxCounter;
-                lastRxCounter = mRxCounter;
-                
-                // record the last update time
-                lastSpeedUpdateTime = System.currentTimeMillis();
-                
             } else if(msg.what == MSG_EDIT_TX_STRING_ASCII_OR_HEX) {
             	String oldStr;
             	String newStr;
@@ -872,9 +902,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
             		
             		// turn on the update speed ui thread
             		isSpeedUpdateOn = true;
-            		// Create a thread to update speed ui
-                	mThreadSpeed = new ThreadSpeed();
-                	mThreadSpeed.start();
+
             	} else if(GattConnectState.STATE_CHARACTERISTIC_NOT_FOUND == mConnectionState) {
             		if(D) Log.i(TAG, "The connection state now is STATE_CHARACTERISTIC_NOT_FOUND");
             		
@@ -906,96 +934,7 @@ public class UnvarnishedTransmissionActivity extends Activity {
         }
     };
     
-    // Auto Tx Thread
-	//在此处使用自动发送开关来进行采集
-    public class ThreadAutoTx extends Thread {
-    	public void run() {
-    		if(D) Log.i(TAG, "auto tx thread is run");
-    		while(isAutoTx) {
-    			// send message to remote
-				SendMessageToRemote("AA");//发送AA
 
-				while(hexReceived == "55"){//等待55,这里为什么不是在不相等的时候等待？好奇怪
-					try {
-						if(D) Log.i(TAG, "auto run waiting 55" + " hexReceived is " + hexReceived);
-						Thread.sleep(1);
-					}catch (InterruptedException e){
-						e.printStackTrace();
-					}
-				}
-
-				SendMessageToRemote("53");
-    			try {
-					if(D) Log.i(TAG, "after send 53 wait a moment");
-					Thread.sleep(800);
-    			} catch (InterruptedException e) {
-    				// TODO Auto-generated catch block
-    				e.printStackTrace();
-    			}
-
-				SendMessageToRemote("41");//发送01Bit3
-				try {
-					if(D) Log.i(TAG, "after send 40 Bit3 wait a moment");
-					Thread.sleep(800);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-
-				SendMessageToRemote("00");//发送00 Bit2
-				try {
-					if(D) Log.i(TAG, "after send Bit2 00 wait a moment");
-					Thread.sleep(800);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-
-				SendMessageToRemote("00");//发送00 Bit1
-				try {
-					if(D) Log.i(TAG, "after send Bit1 01 wait a moment");
-					Thread.sleep(800);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-
-				SendMessageToRemote("01");//发送01 Bit0
-				if(D) Log.i(TAG, "send 01");
-
-
-				while(hexReceived =="AD"){//等待AD到来，此时可以发送0x52开始测量
-					try {
-						if (D) Log.d(TAG,"waiting for AD" + "hexReceived is " + hexReceived);
-						Thread.sleep(1);
-					}catch (InterruptedException e){
-						e.printStackTrace();
-					}
-				}
-
-				while (isAutoTx){
-					SendMessageToRemote("52");//发送52
-					while(hexReceived =="AD"){//等待AD到来，证明一次测量已结束
-						try {
-							if (D) Log.d(TAG,"waiting for AD" + "hexReceived is " + hexReceived);
-							Thread.sleep(1);
-						}catch (InterruptedException e){
-							e.printStackTrace();
-						}
-					}
-					try {
-						if(D) Log.i(TAG, "after send  52 wait a moment");
-						Thread.sleep(500);
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-
-				}
-			}
-    		if(D) Log.i(TAG, "auto tx thread is stop");
-    	}
-    }
     
     
     // Rx Thread
@@ -1018,34 +957,14 @@ public class UnvarnishedTransmissionActivity extends Activity {
     		if(D) Log.i(TAG, "rx thread is stop");
     	}
     }
-    
-    // Speed Thread
-    public class ThreadSpeed extends Thread {
-    	public void run() {
-    		if(D) Log.i(TAG, "speed string UI update thread is run");
-    		while(isSpeedUpdateOn) {
-    			// every 100ms send a update message, about 20/10*100=200Byte
-    			try {
-    				Thread.sleep(SPEED_STRING_UPDATE_TIME);
-    			} catch (InterruptedException e) {
-    				// TODO Auto-generated catch block
-    				e.printStackTrace();
-    			}
-    			// send the msg, here may send less times MSG, so we use the StringBuildler
-    	    	Message message = new Message();
-    	        message.what = MSG_SPEED_STRING_UPDATE;
-    	        handler.sendMessage(message);
-    		}
-    		if(D) Log.i(TAG, "speed string UI update thread is stop");
-    	}
-    }
-    
+
     // unpack and send thread
     public class ThreadUnpackSend extends Thread {
     	byte[] sendData;
     	ThreadUnpackSend(byte[] data) {
     		sendData = data;
     	}
+
     	public void run() {
     		if(D) Log.d(TAG, "ThreadUnpackSend is run");
     		// time test
@@ -1093,11 +1012,8 @@ public class UnvarnishedTransmissionActivity extends Activity {
     private void SendData(byte[] realData) {
     	// for GKI get buffer error exit
 		long timeCost = 0;
-    	
-        
 		// initial the status
 		writeCharacteristicError = true;
-        
 		while(true == writeCharacteristicError) {
 			// mBluetoothGatt.getConnectionState(mDevice) can not use in thread, so we use a flag to
 			// break the circulate when disconnect the connect
@@ -1147,17 +1063,11 @@ public class UnvarnishedTransmissionActivity extends Activity {
 		}
 		
 		if(D) Log.d(TAG, "send data is: " + Arrays.toString(realData));
-		
 		// update tx counter, only write ok then update the counter
 		if(false == writeCharacteristicError) {
 			mTxCounter = mTxCounter + realData.length;
 		}
-		
-		// send the msg, here may send less times MSG, so we use the StringBuildler
-    	Message message = new Message();
-        message.what = MSG_EDIT_TX_STRING_UPDATE;
-        handler.sendMessage(message);
-        
+
     }
     
     // set the connect state

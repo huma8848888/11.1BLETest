@@ -15,6 +15,10 @@
         android:name="android.hardware.bluetooth_le"
         android:required="true" />
 
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
     <application
         android:allowBackup="true"
         android:debuggable="true"
@@ -26,6 +30,7 @@
             android:name="com.bluetooth.unvarnishedtransmission.UnvarnishedTransmissionActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
             android:label="@string/app_name"
+            android:screenOrientation="landscape"
             android:windowSoftInputMode="adjustPan" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -36,8 +41,8 @@
         <activity
             android:name="com.bluetooth.unvarnishedtransmission.DeviceSearchActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
-            android:label="@string/ble_search_name" >
-        </activity>
+            android:label="@string/ble_search_name"
+            android:screenOrientation="landscape" />
     </application>
 
 </manifest>
